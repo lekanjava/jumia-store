@@ -83,3 +83,29 @@ jobs:
           directory: .
           framework: dockerfile
           soft_fail: true
+
+
+
+
+
+          # ---- SBOM job starts here at the SAME level as iac-scan ----
+  sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Generate SBOM (CycloneDX format)
+        run: |
+          syft dir:. -o cyclonedx-json > sbom.json
+
+      - name: Upload SBOM as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: sbom.json
