@@ -1,0 +1,12 @@
+[project]
+name = "jumia-store"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=2.7.15"
+dependencies = [
+    "flask>=1.1.4",
+    "flask-sqlalchemy>=2.5.1",
+    "pyyaml>=5.4.1",
+    "requests>=2.25.1",
+]

@@ -1,0 +1,58 @@
+# ================================================================
+# Jumia Store - Pre-commit Security Hooks
+# Maintained by: Security Engineering
+# Layer 1: Runs on developer laptop before any commit leaves
+# Developers: run "pre-commit install" once after cloning
+# ================================================================
+
+repos:
+
+  # ── Secrets Detection ─────────────────────────────────────────
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.4
+    hooks:
+      - id: gitleaks
+        name: "🔐 Gitleaks - Detect hardcoded secrets"
+
+  # ── General Hygiene ───────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        name: "📋 Validate YAML syntax"
+      - id: check-json
+        name: "📋 Validate JSON syntax"
+      - id: check-merge-conflict
+        name: "🔀 Block merge conflict markers"
+      - id: detect-private-key
+        name: "🔑 Block private keys"
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+        name: "📦 Block large files over 500KB"
+
+  # ── SAST: Static Application Security Testing ─────────────────
+  - repo: https://github.com/semgrep/semgrep
+    rev: v1.72.0
+    hooks:
+      - id: semgrep
+        name: "🔍 Semgrep - SAST (Python + Flask + OWASP)"
+        args:
+          - --config=p/python
+          - --config=p/flask
+          - --config=p/owasp-top-ten
+          - --error
+          - --quiet
+
+  # ── IaC Security ──────────────────────────────────────────────
+  - repo: https://github.com/bridgecrewio/checkov
+    rev: '3.2.0'
+    hooks:
+      - id: checkov
+        name: "🏗️ Checkov - Dockerfile + IaC scan"
+        args:
+          - --quiet
+          - --compact
+          - --framework
+          - dockerfile
