@@ -2,6 +2,8 @@ FROM python:2.7.14-jessie
 
 WORKDIR /apps/
 
+COPY requirements.txt /apps/requirements.txt
+
 COPY app/ /apps/
 
 WORKDIR /apps/

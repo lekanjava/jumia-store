@@ -1,0 +1,64 @@
+name: DAST - ZAP Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  zap-scan:
+    name: DAST (OWASP ZAP)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build the Flask app
+        run: docker build -t jumia-store:test -f Dockerfile .
+
+      - name: Run the app in background
+        run: |
+          docker run -d \
+            --network host \
+            --name target-app \
+            jumia-store:test
+          echo "Waiting for app on port 5050..."
+          for i in {1..20}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5050 || echo "000")
+            echo "Attempt $i: HTTP status = $STATUS"
+            if [ "$STATUS" != "000" ]; then
+              echo "App is responding on port 5050 with status $STATUS"
+              break
+            fi
+            sleep 3
+          done
+
+      - name: Pull ZAP Docker image
+        run: docker pull ghcr.io/zaproxy/zaproxy:stable
+
+      - name: Run ZAP Baseline Scan
+        run: |
+          docker run --network host \
+            -v ${{ github.workspace }}:/zap/wrk/:rw \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+            -t http://localhost:5050 \
+            -r report_html.html \
+            -J report_json.json \
+            -I
+        continue-on-error: true
+
+      - name: Upload ZAP Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-report
+          path: |
+            ${{ github.workspace }}/report_html.html
+            ${{ github.workspace }}/report_json.json
+
+      - name: Stop the app
+        if: always()
+        run: docker stop target-app || true
