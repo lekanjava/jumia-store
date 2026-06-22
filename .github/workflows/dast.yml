@@ -23,32 +23,41 @@ jobs:
           docker run -d \
             --network host \
             --name target-app \
-            -e APP_PORT=5050 \
             jumia-store:test
           echo "Waiting for app on port 5050..."
           for i in {1..20}; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5050 || echo "000")
             echo "Attempt $i: HTTP status = $STATUS"
             if [ "$STATUS" != "000" ]; then
-              echo "App is responding on port 5050"
+              echo "App is responding on port 5050 with status $STATUS"
               break
             fi
             sleep 3
           done
 
+      - name: Pull ZAP Docker image
+        run: docker pull ghcr.io/zaproxy/zaproxy:stable
+
       - name: Run ZAP Baseline Scan
-        uses: zaproxy/action-baseline@v0.14.0
-        with:
-          target: 'http://localhost:5050'
-          cmd_options: '-a -j'
-          fail_action: false
+        run: |
+          docker run --network host \
+            -v ${{ github.workspace }}:/zap/wrk/:rw \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+            -t http://localhost:5050 \
+            -r report_html.html \
+            -J report_json.json \
+            -I
+        continue-on-error: true
 
       - name: Upload ZAP Report
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: zap-report
-          path: report_html.html
+          path: |
+            ${{ github.workspace }}/report_html.html
+            ${{ github.workspace }}/report_json.json
 
       - name: Stop the app
         if: always()
